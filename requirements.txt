@@ -1,0 +1,5 @@
+torch
+open-clip-torch
+git+ssh://git@github.com/apple/ml-mobileclip.git
+pillow
+numpy
