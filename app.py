@@ -9,7 +9,7 @@ from image_rag.storage import collect_images, load_database, save_database
 
 
 def default_model_path() -> str:
-    return str((Path(__file__).resolve().parent / "mod" / "mobileclip2_s0.pt").resolve())
+    return str((Path(__file__).resolve().parent / "mod").resolve())
 
 
 def ask(prompt: str, default: str | None = None) -> str:
@@ -49,7 +49,7 @@ def run_build_index() -> None:
         return
 
     print(f"[2/4] 加载模型: {model_path}")
-    model, preprocess, _ = load_model(model_path, device=device)
+    model, processor, _ = load_model(model_path, device=device)
 
     print(f"[3/4] 提取特征，共 {len(image_paths)} 张...")
     last_pct = {"value": -1}
@@ -62,7 +62,7 @@ def run_build_index() -> None:
 
     vectors = encode_images(
         model=model,
-        preprocess=preprocess,
+        processor=processor,
         image_paths=image_paths,
         device=device,
         batch_size=batch_size,
@@ -109,7 +109,7 @@ def run_search() -> None:
 
 
 def main() -> None:
-    print("纯本地图片检索系统 (MobileCLIP2-S0)")
+    print("纯本地图片检索系统 (Chinese-CLIP)")
     print("1) 生成向量库")
     print("2) 检索向量库")
     choice = ask("请选择功能(1/2): ")

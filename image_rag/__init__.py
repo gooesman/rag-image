@@ -1,1 +1,1 @@
-"""Local image retrieval package using MobileCLIP2-S0."""
+"""Local image retrieval package using Chinese-CLIP."""

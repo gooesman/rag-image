@@ -186,7 +186,17 @@ def _load_database_legacy(db_dir: str) -> Tuple[List[str], np.ndarray, dict]:
 
 def load_database(db_dir: str) -> Tuple[List[str], np.ndarray, dict]:
     target = Path(db_dir).expanduser().resolve()
+
+    # Accept both database directory and explicit sqlite file path.
+    if target.is_file() and target.suffix.lower() == ".db":
+        if target.name == DB_FILE:
+            return _load_database_sqlite(str(target.parent))
+
+        sibling_index = target.parent / DB_FILE
+        if sibling_index.exists():
+            return _load_database_sqlite(str(target.parent))
+
     db_path = target / DB_FILE
     if db_path.exists():
-        return _load_database_sqlite(db_dir)
-    return _load_database_legacy(db_dir)
+        return _load_database_sqlite(str(target))
+    return _load_database_legacy(str(target))

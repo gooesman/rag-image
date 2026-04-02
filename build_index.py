@@ -8,16 +8,16 @@ from image_rag.storage import collect_images, save_database
 
 
 def default_model_path() -> str:
-    return str((Path(__file__).resolve().parent / "mod" / "mobileclip2_s0.pt").resolve())
+    return str((Path(__file__).resolve().parent / "mod").resolve())
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Feature 1 - Build local image vector database using MobileCLIP2-S0"
+        description="Feature 1 - Build local image vector database using Chinese-CLIP"
     )
     parser.add_argument("--images-dir", required=True, help="Local image folder to read")
     parser.add_argument("--db-dir", required=True, help="Local folder where vector database will be saved")
-    parser.add_argument("--model-path", default=default_model_path(), help="Local MobileCLIP2-S0 .pt checkpoint")
+    parser.add_argument("--model-path", default=default_model_path(), help="Local Chinese-CLIP model directory")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size for image embedding")
     parser.add_argument(
@@ -36,7 +36,7 @@ def main() -> None:
         raise SystemExit("No images found in the specified folder.")
 
     print(f"[1/4] Loading model from: {args.model_path}")
-    model, preprocess, _ = load_model(args.model_path, device=args.device)
+    model, processor, _ = load_model(args.model_path, device=args.device)
 
     print(f"[2/4] Found images: {len(image_paths)}")
     print("[3/4] Extracting image embeddings...")
@@ -51,7 +51,7 @@ def main() -> None:
 
     vectors = encode_images(
         model=model,
-        preprocess=preprocess,
+        processor=processor,
         image_paths=image_paths,
         device=args.device,
         batch_size=args.batch_size,

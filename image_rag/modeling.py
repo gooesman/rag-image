@@ -4,50 +4,53 @@ from pathlib import Path
 from typing import Callable, List, Sequence
 
 import numpy as np
-import open_clip
 import torch
 from PIL import Image
-
-try:
-    from mobileclip.modules.common.mobileone import reparameterize_model
-    _MOBILECLIP_IMPORT_ERROR = None
-except Exception as exc:  # pragma: no cover
-    reparameterize_model = None
-    _MOBILECLIP_IMPORT_ERROR = exc
+from transformers import ChineseCLIPModel, ChineseCLIPProcessor
 
 
-MODEL_NAME = "MobileCLIP2-S0"
+MODEL_NAME = "AI-ModelScope/chinese-clip-vit-base-patch16"
 
 
 def _l2_normalize(x: torch.Tensor) -> torch.Tensor:
     return x / x.norm(dim=-1, keepdim=True).clamp(min=1e-12)
 
 
-def load_model(model_path: str, device: str = "cpu"):
-    if _MOBILECLIP_IMPORT_ERROR is not None:
-        raise ImportError(
-            "mobileclip is not installed. Install dependencies with: pip install -r requirements.txt"
-        ) from _MOBILECLIP_IMPORT_ERROR
+def _feature_tensor(output) -> torch.Tensor:
+    if isinstance(output, torch.Tensor):
+        return output
+    if hasattr(output, "pooler_output") and output.pooler_output is not None:
+        return output.pooler_output
+    if isinstance(output, (tuple, list)) and output:
+        first = output[0]
+        if isinstance(first, torch.Tensor):
+            return first
+    raise TypeError(f"Unsupported feature output type: {type(output)!r}")
 
+
+def _resolve_model_dir(model_path: str) -> Path:
     model_file = Path(model_path)
-    if not model_file.exists():
-        raise FileNotFoundError(f"Model file not found: {model_file}")
+    if model_file.is_file():
+        model_file = model_file.parent
+    if not model_file.exists() or not model_file.is_dir():
+        raise FileNotFoundError(f"Model directory not found: {model_file}")
+    return model_file
 
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        MODEL_NAME,
-        pretrained=str(model_file),
-    )
-    tokenizer = open_clip.get_tokenizer(MODEL_NAME)
+
+def load_model(model_path: str, device: str = "cpu"):
+    model_dir = _resolve_model_dir(model_path)
+
+    model = ChineseCLIPModel.from_pretrained(model_dir, local_files_only=True)
+    processor = ChineseCLIPProcessor.from_pretrained(model_dir, local_files_only=True)
 
     model.eval()
-    model = reparameterize_model(model)
     model = model.to(device)
-    return model, preprocess, tokenizer
+    return model, processor, processor.tokenizer
 
 
 def encode_images(
     model,
-    preprocess,
+    processor,
     image_paths: Sequence[str],
     device: str = "cpu",
     batch_size: int = 32,
@@ -63,9 +66,10 @@ def encode_images(
             images = []
             for p in batch_paths:
                 img = Image.open(p).convert("RGB")
-                images.append(preprocess(img))
-            image_tensor = torch.stack(images).to(device)
-            image_features = model.encode_image(image_tensor)
+                images.append(img)
+            inputs = processor(images=images, return_tensors="pt")
+            inputs = {key: value.to(device) for key, value in inputs.items()}
+            image_features = _feature_tensor(model.get_image_features(**inputs))
             image_features = _l2_normalize(image_features)
             vectors.append(image_features.cpu().numpy().astype(np.float32))
             processed += len(batch_paths)
@@ -81,9 +85,10 @@ def encode_text(model, tokenizer, text: str, device: str = "cpu") -> np.ndarray:
     if not text.strip():
         raise ValueError("Text query cannot be empty.")
 
-    tokens = tokenizer([text]).to(device)
+    inputs = tokenizer(text=[text], padding=True, return_tensors="pt")
+    inputs = {key: value.to(device) for key, value in inputs.items()}
     with torch.no_grad():
-        text_features = model.encode_text(tokens)
+        text_features = _feature_tensor(model.get_text_features(**inputs))
         text_features = _l2_normalize(text_features)
 
     return text_features.cpu().numpy().astype(np.float32)[0]

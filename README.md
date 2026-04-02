@@ -1,21 +1,19 @@
-# 纯本地单机图片特征检索（MobileCLIP2-S0）
+# 纯本地单机图片特征检索（基于 Chinese-CLIP）
 
-本项目实现了**完全本地运行**的图片检索系统，严格拆分为两个独立功能：
+本项目实现了完全本地运行的图片检索系统，严格拆分为两个独立功能：
 
 1. 生成向量库：读取本地图片 -> 提取向量 -> 保存到你指定的本地目录
 2. 检索向量库：加载你指定的本地向量库 -> 输入文字 -> 返回匹配图片路径
 
-不依赖云端 API，不需要服务器。
-
 ## 环境要求
 
 - Python 3.10+
-- 本地已有模型文件：`mod/mobileclip2_s0.pt`
-- 建议使用你的 conda 环境：`rag-image`
+- 本地模型目录：`mod/`，里面包含 `config.json`、`pytorch_model.bin`、`preprocessor_config.json`、`vocab.txt`
 
 安装依赖：
 
 ```bash
+conda create -n rag-image python=3.11 -y
 conda activate rag-image
 pip install -r requirements.txt
 ```
@@ -33,8 +31,7 @@ python app.py
 
 说明：
 
-- 当前 `requirements.txt` 使用 SSH 拉取 MobileCLIP：`git+ssh://git@github.com/apple/ml-mobileclip.git`
-- 如果你的机器未配置 GitHub SSH Key，可临时改回 HTTPS：`git+https://github.com/apple/ml-mobileclip.git`
+- 当前代码默认直接加载 `mod/` 目录下的 Chinese-CLIP 模型
 
 ## 功能 1：生成本地向量库（独立运行）
 
@@ -47,15 +44,13 @@ python build_index.py \
 常用可选参数：
 
 ```bash
---model-path /你的模型路径/mobileclip2_s0.pt
+--model-path /你的模型目录/mod
 --device cpu
 --batch-size 32
 --no-recursive
 ```
 
-执行完成后，`--db-dir` 下会生成：
-
-- `index.db`：SQLite 向量库（默认）
+执行完成后，`--db-dir` 下会生成 `index.db`：SQLite 向量库（默认）。
 
 SQLite 中包含：
 
@@ -79,7 +74,7 @@ python search_index.py \
 常用可选参数：
 
 ```bash
---model-path /你的模型路径/mobileclip2_s0.pt
+--model-path /你的模型目录/mod
 --device cpu
 ```
 
@@ -94,6 +89,6 @@ python search_index.py \
 
 - `build_index.py`：功能 1（建库）入口
 - `search_index.py`：功能 2（检索）入口
-- `image_rag/modeling.py`：MobileCLIP2-S0 模型加载与编码
+- `image_rag/modeling.py`：Chinese-CLIP 模型加载与编码
 - `image_rag/storage.py`：本地向量库存取和图片收集
-- `mod/mobileclip2_s0.pt`：本地模型
+- `mod/`：本地模型目录

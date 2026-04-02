@@ -10,12 +10,12 @@ from image_rag.storage import load_database
 
 
 def default_model_path() -> str:
-    return str((Path(__file__).resolve().parent / "mod" / "mobileclip2_s0.pt").resolve())
+    return str((Path(__file__).resolve().parent / "mod").resolve())
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Feature 2 - Search local image vector database using text query"
+        description="Feature 2 - Search local image vector database using Chinese-CLIP"
     )
     parser.add_argument("--db-dir", required=True, help="Local vector database folder to load")
     parser.add_argument("--query", required=True, help="Text query for retrieval")
@@ -23,7 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model-path",
         default=None,
-        help="Local MobileCLIP2-S0 .pt checkpoint. If omitted, tries meta.json then project default.",
+        help="Local Chinese-CLIP model directory. If omitted, tries meta.json then project default.",
     )
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
     return parser.parse_args()
